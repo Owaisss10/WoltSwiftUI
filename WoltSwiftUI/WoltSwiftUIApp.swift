@@ -1,17 +1,14 @@
-//
-//  WoltSwiftUIApp.swift
-//  WoltSwiftUI
-//
-//  Created by Awais Akram on 26.7.2026.
-//
-
 import SwiftUI
 
 @main
 struct WoltSwiftUIApp: App {
+
+    @State private var container = AppContainer()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(container)
         }
     }
 }
