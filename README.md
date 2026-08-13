@@ -6,6 +6,10 @@ A companion to [WoltCompose](https://github.com/Owaisss10/WoltCompose), which bu
 app for Android. The two are deliberately not translations of each other — each solves the
 same problems the way its own platform prefers, and the differences are the interesting part.
 
+| City Selection | City Search | Restaurant List | Restaurant Search |
+|:--------------:|:-----------:|:---------------:|:-----------------:|
+| <img src="screenshots/cities.png" width="220"/> | <img src="screenshots/city-search.png" width="220"/> | <img src="screenshots/restaurants.png" width="220"/> | <img src="screenshots/restaurant-search.png" width="220"/> |
+
 ---
 
 ## Overview
