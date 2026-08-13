@@ -23,12 +23,14 @@ struct CitiesView: View {
                 cityList
             }
         }
+        // Root of the stack, so the standard large title that collapses on scroll.
         .navigationTitle(String(localized: "Choose a city"))
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(
-            text: $viewModel.query,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: String(localized: "Search city")
+        .searchableResults(
+            query: $viewModel.query,
+            prompt: String(localized: "Search city"),
+            visible: viewModel.visibleCities.count,
+            total: viewModel.totalCityCount,
+            noun: String(localized: "cities")
         )
         .task {
             // `.task` is tied to the view's lifetime, so the request is cancelled
@@ -53,16 +55,6 @@ struct CitiesView: View {
             }
         }
         .listStyle(.plain)
-        // Shown only while filtering: "958 of 958" is noise otherwise. A fixed inset
-        // rather than a section header, since plain-style headers pin while scrolling
-        // and read as content floating over the rows.
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if !viewModel.query.isEmpty {
-                resultCount
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(.snappy(duration: 0.2), value: viewModel.query.isEmpty)
         .overlay {
             if viewModel.visibleCities.isEmpty {
                 ContentUnavailableView.search(text: viewModel.query)
@@ -70,21 +62,6 @@ struct CitiesView: View {
         }
     }
 
-    private var resultCount: some View {
-        VStack(spacing: 0) {
-            Text("\(viewModel.visibleCities.count) of \(viewModel.totalCityCount) cities")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.vertical, 8)
-                .accessibilityLabel(
-                    "Showing \(viewModel.visibleCities.count) of \(viewModel.totalCityCount) cities"
-                )
-
-            Divider()
-        }
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-    }
 }
 
 // MARK: - Previews
