@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 nonisolated struct Restaurant: Identifiable, Hashable, Sendable {
     let id: String
@@ -69,19 +70,38 @@ nonisolated struct RestaurantsResponse: Decodable, Sendable {
     let sections: [Section]
 
     struct Section: Decodable, Sendable {
+
         let template: String
-        /// Items that fail to decode are dropped rather than failing the whole page:
-        /// one malformed venue should not empty the screen.
-        let items: [Lossy<Restaurant>]
+        /// Populated only for the venue list. Banners and carousels appear in the same
+        /// array but are not venues, so decoding their items as restaurants would fail
+        /// on every element — burying genuine decoding failures in the noise.
+        let restaurants: [Restaurant]?
+
+        private enum CodingKeys: String, CodingKey {
+            case template, items
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            template = try container.decode(String.self, forKey: .template)
+
+            guard template == RestaurantsResponse.venueListTemplate else {
+                restaurants = nil
+                return
+            }
+
+            // Items that fail to decode are dropped rather than failing the whole page:
+            // one malformed venue should not empty the screen.
+            restaurants = try container
+                .decode([Lossy<Restaurant>].self, forKey: .items)
+                .compactMap(\.value)
+        }
     }
 
     /// `nil` when the venue section is absent entirely, which is a different condition
     /// from a city that genuinely has no restaurants and is reported as such.
     var venueListRestaurants: [Restaurant]? {
-        sections
-            .first { $0.template == Self.venueListTemplate }?
-            .items
-            .compactMap(\.value)
+        sections.first { $0.template == Self.venueListTemplate }?.restaurants
     }
 }
 
@@ -91,6 +111,15 @@ nonisolated struct Lossy<T: Decodable & Sendable>: Decodable, Sendable {
     let value: T?
 
     init(from decoder: any Decoder) throws {
-        value = try? T(from: decoder)
+        do {
+            value = try T(from: decoder)
+        } catch {
+            // Dropping items silently would let a renamed field empty the screen with
+            // no signal at all, so the reason is at least recorded.
+            Logger.decoding.warning(
+                "Dropped a \(String(describing: T.self)): \(error.localizedDescription)"
+            )
+            value = nil
+        }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Performs requests and translates every failure into an ``AppError``.
 ///
@@ -16,13 +17,13 @@ nonisolated extension APIClient {
 
 nonisolated struct LiveAPIClient: APIClient {
 
+    static let woltBaseURL = URL(string: "https://restaurant-api.wolt.com/")!
+
     private let baseURL: URL
     private let session: URLSession
+    private let decoder = JSONDecoder()
 
-    init(
-        baseURL: URL = URL(string: "https://restaurant-api.wolt.com/")!,
-        session: URLSession = .shared
-    ) {
+    init(baseURL: URL = woltBaseURL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
     }
@@ -35,21 +36,31 @@ nonisolated struct LiveAPIClient: APIClient {
         do {
             (data, response) = try await session.data(for: request)
         } catch let error as URLError {
+            Logger.networking.error("\(endpoint.path) failed: \(error.localizedDescription)")
             throw AppError(error)
+        } catch is CancellationError {
+            // Cancellation is not a failure; it is the caller going away.
+            throw AppError.cancelled
         } catch {
+            Logger.networking.error("\(endpoint.path) failed: \(error.localizedDescription)")
             throw AppError.unknown
         }
 
         guard let http = response as? HTTPURLResponse else {
+            Logger.networking.error("\(endpoint.path) returned a non-HTTP response")
             throw AppError.unexpectedResponse
         }
         guard (200..<300).contains(http.statusCode) else {
+            Logger.networking.error("\(endpoint.path) returned \(http.statusCode)")
             throw AppError.server(statusCode: http.statusCode)
         }
 
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try decoder.decode(T.self, from: data)
         } catch {
+            // The full error, not just its description — DecodingError says exactly
+            // which key failed, which is the whole value of catching it here.
+            Logger.decoding.error("\(endpoint.path) did not decode: \(error)")
             throw AppError.unexpectedResponse
         }
     }

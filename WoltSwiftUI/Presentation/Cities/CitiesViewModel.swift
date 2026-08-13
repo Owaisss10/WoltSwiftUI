@@ -6,35 +6,51 @@ final class CitiesViewModel {
 
     private let repository: any CityRepository
 
-    private(set) var state: ViewState<[City]> = .loading
-    var query = ""
+    private(set) var state: ViewState<[City]> = .loading {
+        didSet { refreshVisibleCities() }
+    }
 
-    init(repository: any CityRepository) {
-        self.repository = repository
+    var query = "" {
+        didSet { refreshVisibleCities() }
     }
 
     /// Cities matching the current query.
     ///
-    /// Sorting happens once, when the data arrives — not here, where it would rerun on
-    /// every keystroke. Filtering a loaded array is cheap enough to stay derived, which
-    /// keeps `state` the single source of truth.
-    var visibleCities: [City] {
-        guard let cities = state.value else { return [] }
-        guard !query.isEmpty else { return cities }
-        return cities.filter { $0.name.localizedCaseInsensitiveContains(query) }
-    }
+    /// Recomputed when the query or the loaded data changes, rather than on every
+    /// read: SwiftUI reads this several times per render — for the list, the result
+    /// count, and the empty check — and a computed property would filter each time.
+    private(set) var visibleCities: [City] = []
 
     var totalCityCount: Int {
         state.value?.count ?? 0
     }
 
+    init(repository: any CityRepository) {
+        self.repository = repository
+    }
+
     func load() async {
         state = .loading
         do {
-            let cities = try await repository.cities()
-            state = .loaded(cities.sorted { $0.name < $1.name })
+            // Sorted once here, so filtering never has to re-sort.
+            state = .loaded(try await repository.cities().sorted { $0.name < $1.name })
+        } catch .cancelled {
+            // The screen went away mid-request; leaving the state untouched avoids
+            // showing an error for something the user did not do.
         } catch {
             state = .failed(error)
         }
+    }
+
+    private func refreshVisibleCities() {
+        guard let cities = state.value else {
+            visibleCities = []
+            return
+        }
+        guard !query.isEmpty else {
+            visibleCities = cities
+            return
+        }
+        visibleCities = cities.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 }

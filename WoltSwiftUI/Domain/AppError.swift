@@ -10,6 +10,10 @@ nonisolated enum AppError: Error, Equatable, Sendable {
     case timedOut
     case server(statusCode: Int)
     case unexpectedResponse
+    /// The caller went away mid-request. Not a failure, and never shown to the user —
+    /// the same distinction the Android app gets wrong by catching `Exception` and
+    /// swallowing `CancellationException` with it.
+    case cancelled
     case unknown
 }
 
@@ -25,7 +29,7 @@ nonisolated extension AppError: LocalizedError {
             String(localized: "Wolt’s service is unavailable right now.")
         case .unexpectedResponse:
             String(localized: "We couldn’t read the response.")
-        case .unknown:
+        case .cancelled, .unknown:
             String(localized: "Something went wrong.")
         }
     }
@@ -34,7 +38,7 @@ nonisolated extension AppError: LocalizedError {
     var isRetryable: Bool {
         switch self {
         case .offline, .timedOut, .server, .unknown: true
-        case .unexpectedResponse: false
+        case .unexpectedResponse, .cancelled: false
         }
     }
 }

@@ -9,18 +9,14 @@ import Foundation
 nonisolated extension City {
 
     static let helsinki = City(
-        id: "1", name: "Helsinki", slug: "helsinki",
-        latitude: 60.1699, longitude: 24.9384
+        id: "1", name: "Helsinki", latitude: 60.1699, longitude: 24.9384
     )
 
     static let samples: [City] = [
         .helsinki,
-        City(id: "2", name: "Helsingborg", slug: "helsingborg",
-             latitude: 56.0465, longitude: 12.6945),
-        City(id: "3", name: "Aachen", slug: "aachen",
-             latitude: 50.7753, longitude: 6.0839),
-        City(id: "4", name: "Berlin", slug: "berlin",
-             latitude: 52.52, longitude: 13.405),
+        City(id: "2", name: "Helsingborg", latitude: 56.0465, longitude: 12.6945),
+        City(id: "3", name: "Aachen", latitude: 50.7753, longitude: 6.0839),
+        City(id: "4", name: "Berlin", latitude: 52.52, longitude: 13.405),
     ]
 }
 
